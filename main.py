@@ -3,6 +3,7 @@ from abc import abstractmethod
 
 import matplotlib.pyplot as plt
 import numpy as np
+from tqdm.auto import tqdm
 
 
 def normalize_vector(v):
@@ -107,29 +108,30 @@ def ray_color(objects: list[Hittable], ray: Ray, depth: int = 1) -> np.ndarray:
     return (1 - a) * np.array([1.0, 1.0, 1.0]) + a * np.array([0.5, 0.7, 1.0])
 
 
-ASPECT_RATIO = 16 / 9
-HEIGHT = 720
-WIDTH = int(HEIGHT * ASPECT_RATIO)
-
-VIEWPORT_HEIGHT = 2.0
-VIEWPORT_WIDTH = VIEWPORT_HEIGHT * (WIDTH / HEIGHT)
-
-focal_length = 1
-camera_center = np.array([0, 0, 0])
-
-viewport_u = np.array([VIEWPORT_WIDTH, 0, 0])
-viewport_v = np.array([0, -VIEWPORT_HEIGHT, 0])
-
-pixel_delta_u = viewport_u / WIDTH
-pixel_delta_v = viewport_v / HEIGHT
-
-viewport_upper_left = (
-    camera_center - np.array([0, 0, focal_length]) - viewport_u / 2 - viewport_v / 2
-)
-pixel00_location = viewport_upper_left + 0.5 * (pixel_delta_u + pixel_delta_v)
-
-
 if __name__ == "__main__":
+    ASPECT_RATIO = 16 / 9
+    HEIGHT = 720
+    WIDTH = int(HEIGHT * ASPECT_RATIO)
+
+    VIEWPORT_HEIGHT = 2.0
+    VIEWPORT_WIDTH = VIEWPORT_HEIGHT * (WIDTH / HEIGHT)
+
+    NUM_RAY_SAMPLES = 5
+
+    focal_length = 1
+    camera_center = np.array([0, 0, 0])
+
+    viewport_u = np.array([VIEWPORT_WIDTH, 0, 0])
+    viewport_v = np.array([0, -VIEWPORT_HEIGHT, 0])
+
+    pixel_delta_u = viewport_u / WIDTH
+    pixel_delta_v = viewport_v / HEIGHT
+
+    viewport_upper_left = (
+        camera_center - np.array([0, 0, focal_length]) - viewport_u / 2 - viewport_v / 2
+    )
+    pixel00_location = viewport_upper_left + 0.5 * (pixel_delta_u + pixel_delta_v)
+
     sphere = Sphere(np.array([-1, 0, -1]), 0.5, np.array([0.9, 0.2, 0.2]), True)
     sphere2 = Sphere(np.array([0, 0, -1]), 0.5, np.array([0.2, 0.9, 0.2]), False)
     sphere3 = Sphere(np.array([1, 0, -1]), 0.5, np.array([0.2, 0.2, 0.9]), True)
@@ -137,17 +139,18 @@ if __name__ == "__main__":
         np.array([0, -100.5, -1]), 100.0, np.array([0.8, 0.8, 0.8]), False
     )
     image = []
-    for i in range(HEIGHT):
-        print("Processing row:", i+1, "/", HEIGHT)
+    for i in tqdm(range(HEIGHT), desc="Rendering image", unit=" lines"):
         image_row = []
         for j in range(WIDTH):
             pixel_center = (
                 pixel00_location + (j * pixel_delta_u) + (i * pixel_delta_v)
             )
-            ray_direction = pixel_center - camera_center
-            ray = Ray(camera_center, ray_direction)
             rayColor = np.array([0.0, 0.0, 0.0])
-            rayColor += ray_color([sphere, sphere2, sphere3, sphere4], ray)
+            for k in range(NUM_RAY_SAMPLES):
+                ray_direction = pixel_center - random_ray(pixel_center).direction * 0.001 - camera_center
+                ray = Ray(camera_center, ray_direction)
+                rayColor += ray_color([sphere, sphere2, sphere3, sphere4], ray)
+            rayColor /= NUM_RAY_SAMPLES
             r, g, b = rayColor
             r, g, b = (
                 int(math.sqrt(r) * 255.999),
