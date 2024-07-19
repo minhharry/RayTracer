@@ -1,6 +1,7 @@
 import math
 from abc import abstractmethod
 
+import matplotlib.pyplot as plt
 import numpy as np
 
 
@@ -58,7 +59,7 @@ def random_ray(origin: np.ndarray) -> Ray:
     """Generates a random unit vector."""
     return Ray(
         origin,
-        np.array([np.random.random(), np.random.random(), np.random.random()]),
+        np.array([np.random.random()*2-1, np.random.random()*2-1, np.random.random()*2-1]),
     )
 
 
@@ -95,7 +96,7 @@ def ray_color(objects: list[Hittable], ray: Ray, depth: int = 1) -> np.ndarray:
         if t[0]:
             t_max = t[1]
             ans = t
-    if ans[0] and depth < 10:
+    if ans[0] and depth < 5:
         if ans[5]:
             return ans[4] * ray_color(objects, Ray(ans[2], reflect(ray.direction, ans[3])), depth + 1)
         randRay = random_on_hemisphere(ans[2], ans[3])
@@ -113,8 +114,6 @@ WIDTH = int(HEIGHT * ASPECT_RATIO)
 VIEWPORT_HEIGHT = 2.0
 VIEWPORT_WIDTH = VIEWPORT_HEIGHT * (WIDTH / HEIGHT)
 
-NUM_RAY_SAMPLES = 3
-
 focal_length = 1
 camera_center = np.array([0, 0, 0])
 
@@ -129,32 +128,38 @@ viewport_upper_left = (
 )
 pixel00_location = viewport_upper_left + 0.5 * (pixel_delta_u + pixel_delta_v)
 
+
 if __name__ == "__main__":
-    with open("output.ppm", "w") as f:
-        sphere = Sphere(np.array([-1, 0, -1]), 0.5, np.array([0.9, 0.2, 0.2]), True)
-        sphere2 = Sphere(np.array([0, 0, -1]), 0.5, np.array([0.2, 0.9, 0.2]), False)
-        sphere3 = Sphere(np.array([1, 0, -1]), 0.5, np.array([0.2, 0.2, 0.9]), True)
-        sphere4 = Sphere(
-            np.array([0, -100.5, -1]), 100.0, np.array([0.8, 0.8, 0.8]), False
-        )
-        print("P3", file=f)
-        print(WIDTH, HEIGHT, file=f)
-        print(255, file=f)
-        for i in range(HEIGHT):
-            for j in range(WIDTH):
-                pixel_center = (
-                    pixel00_location + (j * pixel_delta_u) + (i * pixel_delta_v)
-                )
-                ray_direction = pixel_center - camera_center
-                ray = Ray(camera_center, ray_direction)
-                rayColor = np.array([0.0, 0.0, 0.0])
-                for k in range(NUM_RAY_SAMPLES):
-                    rayColor += ray_color([sphere, sphere2, sphere3, sphere4], ray)
-                rayColor /= NUM_RAY_SAMPLES
-                r, g, b = rayColor
-                r, g, b = (
-                    int(math.sqrt(r) * 255.999),
-                    int(math.sqrt(g) * 255.999),
-                    int(math.sqrt(b) * 255.999),
-                )
-                print(r, g, b, file=f)
+    sphere = Sphere(np.array([-1, 0, -1]), 0.5, np.array([0.9, 0.2, 0.2]), True)
+    sphere2 = Sphere(np.array([0, 0, -1]), 0.5, np.array([0.2, 0.9, 0.2]), False)
+    sphere3 = Sphere(np.array([1, 0, -1]), 0.5, np.array([0.2, 0.2, 0.9]), True)
+    sphere4 = Sphere(
+        np.array([0, -100.5, -1]), 100.0, np.array([0.8, 0.8, 0.8]), False
+    )
+    image = []
+    for i in range(HEIGHT):
+        print("Processing row:", i+1, "/", HEIGHT)
+        image_row = []
+        for j in range(WIDTH):
+            pixel_center = (
+                pixel00_location + (j * pixel_delta_u) + (i * pixel_delta_v)
+            )
+            ray_direction = pixel_center - camera_center
+            ray = Ray(camera_center, ray_direction)
+            rayColor = np.array([0.0, 0.0, 0.0])
+            rayColor += ray_color([sphere, sphere2, sphere3, sphere4], ray)
+            r, g, b = rayColor
+            r, g, b = (
+                int(math.sqrt(r) * 255.999),
+                int(math.sqrt(g) * 255.999),
+                int(math.sqrt(b) * 255.999),
+            )
+            image_row.append((r, g, b))
+        image.append(image_row)
+
+    image = np.array(image, dtype=np.uint8)
+    plt.imshow(image)
+    plt.axis('off')
+    plt.imsave('output.png', image)
+    plt.show()
+
